@@ -26,16 +26,23 @@ function StarDisplay({ rating, size = "sm" }: { rating: number; size?: "sm" | "m
 
 function ReviewPopover({ summary }: { summary: ReviewSummary }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   if (summary.totalCount === 0) return null;
 
+  const handleEnter = () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    setOpen(true);
+  };
+  const handleLeave = () => {
+    closeTimer.current = setTimeout(() => setOpen(false), 150);
+  };
+
   return (
     <div
-      ref={ref}
       className="relative inline-block"
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
+      onMouseEnter={handleEnter}
+      onMouseLeave={handleLeave}
     >
       <button className="flex items-center gap-1.5 rounded-xl border border-gray-100 bg-gray-50 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 transition">
         <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
@@ -45,7 +52,11 @@ function ReviewPopover({ summary }: { summary: ReviewSummary }) {
       </button>
 
       {open && summary.last5.length > 0 && (
-        <div className="absolute left-0 top-full z-50 mt-1.5 w-80 rounded-2xl border border-gray-100 bg-white p-3 shadow-xl">
+        <div
+          className="absolute left-0 top-full z-50 w-80 rounded-2xl border border-gray-100 bg-white p-3 shadow-xl"
+          onMouseEnter={handleEnter}
+          onMouseLeave={handleLeave}
+        >
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
             Son 5 Değerlendirme
           </p>
