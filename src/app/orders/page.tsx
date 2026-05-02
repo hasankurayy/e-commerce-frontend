@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -25,6 +25,49 @@ const statusConfig: Record<OrderStatus, { label: string; bg: string; text: strin
   REFUNDED:           { label: "İade Edildi",       bg: "bg-gray-50",    text: "text-gray-600",   dot: "bg-gray-400" },
   CANCELLED:          { label: "İptal Edildi",      bg: "bg-red-50",     text: "text-red-600",    dot: "bg-red-400" },
 };
+
+const TRACKING_STEPS: { status: OrderStatus; label: string; icon: React.ElementType }[] = [
+  { status: "PAID",       label: "Ödendi",          icon: CheckCircle },
+  { status: "PROCESSING", label: "Hazırlanıyor",     icon: Package },
+  { status: "SHIPPED",    label: "Kargoda",          icon: Truck },
+  { status: "DELIVERED",  label: "Teslim Edildi",    icon: CheckCircle },
+];
+
+const TRACKING_STATUSES = new Set<OrderStatus>(["PAID", "PROCESSING", "SHIPPED", "DELIVERED"]);
+
+function OrderTimeline({ status }: { status: OrderStatus }) {
+  if (!TRACKING_STATUSES.has(status)) return null;
+  const currentIdx = TRACKING_STEPS.findIndex((s) => s.status === status);
+
+  return (
+    <div className="mb-4 rounded-xl border border-gray-100 bg-white px-4 py-4">
+      <div className="relative flex items-start justify-between">
+        <div className="absolute left-0 right-0 top-4 mx-auto h-0.5 bg-gray-100" style={{ left: "calc(12.5%)", right: "calc(12.5%)" }} />
+        {TRACKING_STEPS.map((step, idx) => {
+          const done = idx < currentIdx;
+          const active = idx === currentIdx;
+          const Icon = step.icon;
+          return (
+            <div key={step.status} className="relative z-10 flex flex-1 flex-col items-center gap-1.5">
+              <div className={`flex h-8 w-8 items-center justify-center rounded-full border-2 transition-all ${
+                done    ? "border-indigo-500 bg-indigo-500 text-white" :
+                active  ? "border-indigo-500 bg-white text-indigo-600 shadow-sm shadow-indigo-200" :
+                          "border-gray-200 bg-white text-gray-300"
+              }`}>
+                <Icon className="h-4 w-4" />
+              </div>
+              <span className={`text-center text-[11px] font-medium leading-tight ${
+                active ? "text-indigo-600" : done ? "text-gray-700" : "text-gray-400"
+              }`}>
+                {step.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function OrderCard({ order }: { order: Order }) {
   const [open, setOpen] = useState(false);
@@ -66,6 +109,7 @@ function OrderCard({ order }: { order: Order }) {
 
       {open && (
         <div className="border-t border-gray-50 bg-gray-50/30 px-5 py-5">
+          <OrderTimeline status={order.status} />
           {/* Items */}
           <div className="mb-4 divide-y divide-gray-100 rounded-xl border border-gray-100 bg-white overflow-hidden">
             {order.items.map((item, i) => (
