@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Shield, Zap, ShoppingBag, Star, Truck, RefreshCw, Package } from "lucide-react";
+import { ArrowRight, Shield, Zap, ShoppingBag, Star, Truck, RefreshCw, Package } from "lucide-react";
 import HeroActions from "@/components/home/HeroActions";
 
 const features = [
