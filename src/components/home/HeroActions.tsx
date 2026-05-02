@@ -34,6 +34,12 @@ export default function HeroActions() {
         <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
       </Link>
       <Link
+        href="/auth/login"
+        className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-base font-semibold text-white backdrop-blur-sm transition-all hover:bg-white/10"
+      >
+        Giriş Yap
+      </Link>
+      <Link
         href="/auth/register"
         className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-base font-semibold text-white backdrop-blur-sm transition-all hover:bg-white/10"
       >
