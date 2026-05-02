@@ -44,8 +44,8 @@ function OrderTimeline({ status }: { status: OrderStatus }) {
       <div className="relative flex items-start justify-between">
         <div className="absolute left-0 right-0 top-4 mx-auto h-0.5 bg-gray-100" style={{ left: "calc(12.5%)", right: "calc(12.5%)" }} />
         {TRACKING_STEPS.map((step, idx) => {
-          const done = idx < currentIdx;
-          const active = idx === currentIdx;
+          const done = idx <= currentIdx;
+          const active = idx === currentIdx && status !== "DELIVERED";
           const Icon = step.icon;
           return (
             <div key={step.status} className="relative z-10 flex flex-1 flex-col items-center gap-1.5">
