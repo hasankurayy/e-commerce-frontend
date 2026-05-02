@@ -45,10 +45,13 @@ export default function ProductsPage() {
     },
   });
 
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
+
   const handleSearch = () => {
     setSearch(input.trim());
     setSelectedCategory(null);
     setPage(0);
+    scrollToTop();
   };
 
   const handleCategory = (id: number | null) => {
@@ -56,6 +59,12 @@ export default function ProductsPage() {
     setInput("");
     setSearch("");
     setPage(0);
+    scrollToTop();
+  };
+
+  const handlePage = (p: number) => {
+    setPage(p);
+    scrollToTop();
   };
 
   const activeCategory = categories?.find((c) => c.id === selectedCategory);
@@ -178,7 +187,7 @@ export default function ProductsPage() {
         {data && data.totalPages > 1 && (
           <div className="mt-12 flex items-center justify-center gap-2">
             <button
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              onClick={() => handlePage(Math.max(0, page - 1))}
               disabled={page === 0}
               className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-40"
             >
@@ -191,7 +200,7 @@ export default function ProductsPage() {
                 return (
                   <button
                     key={p}
-                    onClick={() => setPage(p)}
+                    onClick={() => handlePage(p)}
                     className={`h-9 w-9 rounded-lg text-sm font-medium transition ${
                       p === page ? "bg-indigo-600 text-white" : "text-gray-600 hover:bg-gray-100"
                     }`}
@@ -202,7 +211,7 @@ export default function ProductsPage() {
               })}
             </div>
             <button
-              onClick={() => setPage((p) => p + 1)}
+              onClick={() => handlePage(page + 1)}
               disabled={data.last}
               className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-40"
             >
