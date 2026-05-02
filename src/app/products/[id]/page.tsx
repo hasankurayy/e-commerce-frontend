@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ShoppingCart, ArrowLeft, Package, Flame, CheckCircle, Tag, Star, Mail } from "lucide-react";
@@ -26,37 +26,35 @@ function StarDisplay({ rating, size = "sm" }: { rating: number; size?: "sm" | "m
 
 function ReviewPopover({ summary }: { summary: ReviewSummary }) {
   const [open, setOpen] = useState(false);
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
 
   if (summary.totalCount === 0) return null;
 
-  const handleEnter = () => {
-    if (closeTimer.current) clearTimeout(closeTimer.current);
-    setOpen(true);
-  };
-  const handleLeave = () => {
-    closeTimer.current = setTimeout(() => setOpen(false), 150);
-  };
-
   return (
-    <div
-      className="relative inline-block"
-      onMouseEnter={handleEnter}
-      onMouseLeave={handleLeave}
-    >
-      <button className="flex items-center gap-1.5 rounded-xl border border-gray-100 bg-gray-50 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 transition">
+    <div ref={containerRef} className="relative inline-block">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 rounded-xl border border-gray-100 bg-gray-50 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 transition"
+      >
         <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
         {summary.averageRating.toFixed(1)}
         <span className="text-gray-400">({summary.totalCount})</span>
-        <span className="ml-1 text-xs text-gray-400">Son 5 değerlendirme ↓</span>
+        <span className="ml-1 text-xs text-gray-400">Son 5 değerlendirme {open ? "↑" : "↓"}</span>
       </button>
 
       {open && summary.last5.length > 0 && (
-        <div
-          className="absolute left-0 top-full z-50 w-80 rounded-2xl border border-gray-100 bg-white p-3 shadow-xl"
-          onMouseEnter={handleEnter}
-          onMouseLeave={handleLeave}
-        >
+        <div className="absolute left-0 top-full z-50 mt-1.5 w-80 rounded-2xl border border-gray-100 bg-white p-3 shadow-xl">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
             Son 5 Değerlendirme
           </p>
