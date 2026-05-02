@@ -1,13 +1,82 @@
 "use client";
+import { useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ShoppingCart, ArrowLeft, Package, Flame, CheckCircle, Tag } from "lucide-react";
+import { ShoppingCart, ArrowLeft, Package, Flame, CheckCircle, Tag, Star, Mail } from "lucide-react";
 import api from "@/lib/api";
-import { ApiResponse, Product } from "@/types";
+import { ApiResponse, Product, ReviewSummary } from "@/types";
 import { formatPrice } from "@/lib/utils";
 import { useAddToCart } from "@/hooks/useCart";
 import { useAuthStore } from "@/store/auth.store";
 import Link from "next/link";
+
+function StarDisplay({ rating, size = "sm" }: { rating: number; size?: "sm" | "md" }) {
+  const s = size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4";
+  return (
+    <span className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Star
+          key={i}
+          className={`${s} ${i <= Math.round(rating) ? "fill-amber-400 text-amber-400" : "fill-gray-200 text-gray-200"}`}
+        />
+      ))}
+    </span>
+  );
+}
+
+function ReviewPopover({ summary }: { summary: ReviewSummary }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  if (summary.totalCount === 0) return null;
+
+  return (
+    <div
+      ref={ref}
+      className="relative inline-block"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button className="flex items-center gap-1.5 rounded-xl border border-gray-100 bg-gray-50 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 transition">
+        <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+        {summary.averageRating.toFixed(1)}
+        <span className="text-gray-400">({summary.totalCount})</span>
+        <span className="ml-1 text-xs text-gray-400">Son 5 değerlendirme ↓</span>
+      </button>
+
+      {open && summary.last5.length > 0 && (
+        <div className="absolute left-0 top-full z-50 mt-1.5 w-80 rounded-2xl border border-gray-100 bg-white p-3 shadow-xl">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+            Son 5 Değerlendirme
+          </p>
+          <div className="space-y-2">
+            {summary.last5.map((r) => (
+              <div key={r.id} className="flex items-start justify-between gap-2 rounded-xl bg-gray-50 px-3 py-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate text-sm font-semibold text-gray-800">{r.userName}</span>
+                    <StarDisplay rating={r.rating} />
+                  </div>
+                  {r.comment && (
+                    <p className="mt-0.5 truncate text-xs text-gray-500">{r.comment}</p>
+                  )}
+                </div>
+                <a
+                  href={`mailto:${r.userEmail}?subject=Değerlendirmeniz hakkında&body=Merhaba ${r.userName},%0A%0ADeğerlendirmeniz için teşekkür ederiz!`}
+                  className="shrink-0 rounded-lg p-1.5 text-gray-400 transition hover:bg-indigo-50 hover:text-indigo-600"
+                  title={`${r.userEmail} adresine mail gönder`}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Mail className="h-3.5 w-3.5" />
+                </a>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +88,17 @@ export default function ProductDetailPage() {
     queryKey: ["product", id],
     queryFn: async () => {
       const { data } = await api.get<ApiResponse<Product>>(`/api/products/${id}`);
+      return data.data;
+    },
+  });
+
+  const { data: reviewSummary } = useQuery<ReviewSummary>({
+    queryKey: ["review-summary", id],
+    enabled: !!id,
+    queryFn: async () => {
+      const { data } = await api.get<ApiResponse<ReviewSummary>>(
+        `/api/products/${id}/reviews/summary`
+      );
       return data.data;
     },
   });
@@ -124,6 +204,17 @@ export default function ProductDetailPage() {
           )}
 
           <h1 className="text-3xl font-black leading-snug text-gray-900">{product.name}</h1>
+
+          {/* Rating */}
+          {reviewSummary && (
+            <div className="mt-2">
+              {reviewSummary.totalCount > 0 ? (
+                <ReviewPopover summary={reviewSummary} />
+              ) : (
+                <span className="text-xs text-gray-400">Henüz değerlendirme yok</span>
+              )}
+            </div>
+          )}
 
           <p className="mt-4 leading-relaxed text-gray-500">{product.description}</p>
 

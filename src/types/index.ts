@@ -85,6 +85,23 @@ export interface Order {
   createdAt: string;
 }
 
+export interface Review {
+  id: number;
+  userId: number;
+  userEmail: string;
+  userName: string;
+  rating: number;
+  comment?: string;
+  createdAt: string;
+}
+
+export interface ReviewSummary {
+  averageRating: number;
+  totalCount: number;
+  last5: Review[];
+  myReview: Review | null;
+}
+
 export type OrderStatus =
   | "PENDING_PAYMENT"
   | "PAYMENT_PROCESSING"

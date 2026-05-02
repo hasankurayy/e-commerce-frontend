@@ -1,14 +1,14 @@
 "use client";
 import React, { useState, useEffect, Suspense } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   Package, ChevronDown, ChevronUp,
-  Clock, CheckCircle, XCircle, Truck, MapPin, Tag
+  Clock, CheckCircle, XCircle, Truck, MapPin, Tag, Star
 } from "lucide-react";
 import api from "@/lib/api";
-import { ApiResponse, PageResponse, Order, OrderStatus } from "@/types";
+import { ApiResponse, PageResponse, Order, OrderStatus, ReviewSummary } from "@/types";
 import { formatPrice, formatDate } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth.store";
 import Link from "next/link";
@@ -69,6 +69,67 @@ function OrderTimeline({ status }: { status: OrderStatus }) {
   );
 }
 
+function ProductRating({ productId }: { productId: number }) {
+  const queryClient = useQueryClient();
+  const [hovered, setHovered] = useState(0);
+  const [comment, setComment] = useState("");
+
+  const { data: summary } = useQuery<ReviewSummary>({
+    queryKey: ["review-summary", productId],
+    queryFn: async () => {
+      const { data } = await api.get<ApiResponse<ReviewSummary>>(
+        `/api/products/${productId}/reviews/summary`
+      );
+      return data.data;
+    },
+  });
+
+  const { mutate: submitReview, isPending } = useMutation({
+    mutationFn: (rating: number) =>
+      api.post(`/api/products/${productId}/reviews`, { rating, comment: comment || undefined }),
+    onSuccess: () => {
+      toast.success("Değerlendirmeniz kaydedildi!");
+      queryClient.invalidateQueries({ queryKey: ["review-summary", productId] });
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || "Değerlendirme gönderilemedi");
+    },
+  });
+
+  const myReview = summary?.myReview;
+
+  if (myReview) {
+    return (
+      <div className="mt-1.5 flex items-center gap-1.5">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <Star key={i} className={`h-4 w-4 ${i <= myReview.rating ? "fill-amber-400 text-amber-400" : "fill-gray-200 text-gray-200"}`} />
+        ))}
+        <span className="text-xs text-gray-400">Değerlendirdiniz</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-2 space-y-1.5">
+      <div className="flex items-center gap-1">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <button
+            key={i}
+            disabled={isPending}
+            onMouseEnter={() => setHovered(i)}
+            onMouseLeave={() => setHovered(0)}
+            onClick={() => submitReview(i)}
+            className="transition-transform hover:scale-110 disabled:opacity-50"
+          >
+            <Star className={`h-5 w-5 ${i <= hovered ? "fill-amber-400 text-amber-400" : "fill-gray-200 text-gray-200"}`} />
+          </button>
+        ))}
+        <span className="ml-1 text-xs text-gray-400">Değerlendir</span>
+      </div>
+    </div>
+  );
+}
+
 function OrderCard({ order }: { order: Order }) {
   const [open, setOpen] = useState(false);
   const s = statusConfig[order.status];
@@ -113,17 +174,24 @@ function OrderCard({ order }: { order: Order }) {
           {/* Items */}
           <div className="mb-4 divide-y divide-gray-100 rounded-xl border border-gray-100 bg-white overflow-hidden">
             {order.items.map((item, i) => (
-              <div key={i} className="flex items-center justify-between px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-xs font-bold text-indigo-400">
-                    {item.productName.charAt(0)}
+              <div key={i} className="px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-xs font-bold text-indigo-400">
+                      {item.productName.charAt(0)}
+                    </div>
+                    <span className="text-sm text-gray-700">
+                      {item.productName}
+                      <span className="ml-1.5 text-gray-400">×{item.quantity}</span>
+                    </span>
                   </div>
-                  <span className="text-sm text-gray-700">
-                    {item.productName}
-                    <span className="ml-1.5 text-gray-400">×{item.quantity}</span>
-                  </span>
+                  <span className="text-sm font-semibold text-gray-900">{formatPrice(item.subtotal)}</span>
                 </div>
-                <span className="text-sm font-semibold text-gray-900">{formatPrice(item.subtotal)}</span>
+                {order.status === "DELIVERED" && (
+                  <div className="ml-11">
+                    <ProductRating productId={item.productId} />
+                  </div>
+                )}
               </div>
             ))}
           </div>
