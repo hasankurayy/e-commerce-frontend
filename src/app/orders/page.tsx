@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   Package, ChevronDown, ChevronUp,
-  Clock, CheckCircle, XCircle, Truck, MapPin, Tag, Star
+  Clock, CheckCircle, XCircle, Truck, MapPin, Tag, Star, RotateCcw
 } from "lucide-react";
 import api from "@/lib/api";
 import { ApiResponse, PageResponse, Order, OrderStatus, ReviewSummary } from "@/types";
@@ -132,7 +132,22 @@ function ProductRating({ productId }: { productId: number }) {
 
 function OrderCard({ order }: { order: Order }) {
   const [open, setOpen] = useState(false);
+  const [confirmReturn, setConfirmReturn] = useState(false);
+  const queryClient = useQueryClient();
   const s = statusConfig[order.status];
+
+  const { mutate: requestReturn, isPending: isReturning } = useMutation({
+    mutationFn: () => api.post(`/api/orders/${order.id}/return`),
+    onSuccess: () => {
+      toast.success("İade talebiniz işlendi, ödemeniz iade edilecektir.");
+      setConfirmReturn(false);
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || "İade işlemi başarısız");
+      setConfirmReturn(false);
+    },
+  });
 
   return (
     <div className={`overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow ${open ? "shadow-md" : "hover:shadow-md"}`}>
@@ -214,9 +229,37 @@ function OrderCard({ order }: { order: Order }) {
                 {formatPrice(order.totalAmount)}
               </div>
               {order.status === "DELIVERED" && (
-                <div className="flex items-center gap-1.5 text-sm font-medium text-green-600">
-                  <CheckCircle className="h-4 w-4" />
-                  Teslim Edildi
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 text-sm font-medium text-green-600">
+                    <CheckCircle className="h-4 w-4" />
+                    Teslim Edildi
+                  </div>
+                  {!confirmReturn ? (
+                    <button
+                      onClick={() => setConfirmReturn(true)}
+                      className="flex items-center gap-1 rounded-lg border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-600 hover:bg-orange-100 transition"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      İade Et
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs text-gray-500">Emin misiniz?</span>
+                      <button
+                        onClick={() => requestReturn()}
+                        disabled={isReturning}
+                        className="rounded-lg bg-orange-500 px-2.5 py-1 text-xs font-semibold text-white hover:bg-orange-600 disabled:opacity-50 transition"
+                      >
+                        {isReturning ? "İşleniyor..." : "Evet, İade Et"}
+                      </button>
+                      <button
+                        onClick={() => setConfirmReturn(false)}
+                        className="rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-500 hover:bg-gray-50 transition"
+                      >
+                        Vazgeç
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
               {(order.status === "CANCELLED" || order.status === "PAYMENT_FAILED") && (
